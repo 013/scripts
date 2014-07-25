@@ -2,7 +2,6 @@
 installPath="/opt/resolve-dynamic-hosts"
 cronPath="/etc/cron.d"
 updateFrequency=1
-iptablespath=`which iptables`
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -18,11 +17,32 @@ fi
 
 unset tmp
 
+# Get location of iptables
+iptablespath="/sbin/iptables"
+if [[ -f /usr/bin/which ]]
+then
+	iptablespath=`which iptables`
+else
+	read -p "Enter the location of iptables [/sbin/iptables]: " tmp
+	if [[ ! -z $tmp ]]
+	then
+		iptablespath=$tmp
+	fi
+	unset tmp
+fi
+
 read -p "Enter the frequency (minutes) with which to update the iptables Rules [1]: " tmp
 
 if [[ ! -z $tmp ]]
 then
 	updateFrequency=$tmp
+fi
+
+if [ ! -d $cronPath ]
+then
+	echo "Cron path '$cronPath' not found....
+exiting..."
+	exit 1
 fi
 
 echo
@@ -126,4 +146,5 @@ echo "Saving iptables rules"
 /usr/sbin/service iptables save
 
 echo
-echo "Software installed\nYou can now edit $installPath/list"
+echo "Software installed
+You can now edit $installPath/list"
