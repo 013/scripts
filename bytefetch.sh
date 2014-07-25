@@ -31,6 +31,13 @@ else
 	unset tmp
 fi
 
+if [[ ! -f $iptablespath ]]
+then
+	echo "[$(tput setaf 1)Error$(tput sgr0)] iptables binary not found '$iptablespath'...
+exiting..."
+	exit 1
+fi
+
 read -p "Enter the frequency (minutes) with which to update the iptables Rules [1]: " tmp
 
 if [[ ! -z $tmp ]]
@@ -40,7 +47,7 @@ fi
 
 if [ ! -d $cronPath ]
 then
-	echo "Cron path '$cronPath' not found....
+	echo "[$(tput setaf 1)Error$(tput sgr0)] cron path '$cronPath' not found....
 exiting..."
 	exit 1
 fi
@@ -54,13 +61,27 @@ iptables-save > backup.iptables
 
 echo
 echo
-echo "Installing Cronjob..."
+echo "[$(tput setaf 4)Info$(tput sgr0)] Installing Cronjob..."
 echo "*/$updateFrequency * * * * root $installPath/run.sh" > $cronPath/resolve-asterisk-dynamic-hosts
 
-echo "Creating directories..."
+if [[ -f $cronPath/resolve-asterisk-dynamic-hosts ]]
+then
+	echo "[$(tput setaf 2) OK $(tput sgr0)] Installing Cronjob... Done"
+else
+	echo "[$(tput setaf 1)Error$(tput sgr0)] Installing Cronjob... Error..."
+fi
+
+echo "[$(tput setaf 4)Info$(tput sgr0)] Creating directories..."
 mkdir -p $installPath
 
-echo "Installing Script..."
+if [[ -d $installPath ]]
+then
+	echo "[$(tput setaf 2) OK $(tput sgr0)] Creating directories..."
+else
+	echo "[$(tput setaf 1)Error$(tput sgr0)] Creating directories... $(tput setaf 1)Error$(tput sgr0): directories not created '$installPath'..."
+fi
+
+echo "[$(tput setaf 4)Info$(tput sgr0)] Installing Script..."
 echo "
 #!/bin/bash
 #set -x
@@ -133,18 +154,40 @@ echo "# When specifying a port a protocol must also be specified each entry on a
 install -m 700 run.sh $installPath
 install -m 700 list $installPath
 
-echo "Creating iptables chain..."
-$iptablespath -N DYNAMIC_HOSTS
+if [[ -f $installPath/run.sh ]]
+then
+	echo "[$(tput setaf 2) OK $(tput sgr0)] script installed..."
+else
+	echo "[$(tput setaf 1)Error$(tput sgr0)] script not installed, check permissions of '$installPath'..."
+fi
 
-echo "Adding dynamic hosts to INPUT chain"
+
+
+echo "[$(tput setaf 4)Info$(tput sgr0)] Creating iptables chain..."
+
+nc=`$iptablespath -N DYNAMIC_HOSTS 2>&1`
+
+if [[ "$nc" == "iptables: Chain already exists." ]]
+then
+	echo "[$(tput setaf 3)Warn$(tput sgr0)] $nc"
+else
+	echo "[$(tput setaf 2) OK $(tput sgr0)] $nc"
+fi
+
+echo "[$(tput setaf 4)Info$(tput sgr0)] Adding dynamic hosts to INPUT chain"
 $iptablespath -I INPUT -j DYNAMIC_HOSTS
 
-echo "Restarting cron..."
+echo "[$(tput setaf 4)Info$(tput sgr0)] Restarting cron...
+"
 /usr/sbin/service crond restart
 
-echo "Saving iptables rules"
+echo
+
+echo "[$(tput setaf 4)Info$(tput sgr0)] Saving iptables rules
+"
 /usr/sbin/service iptables save
 
 echo
-echo "Software installed
+echo "$(tput setaf 2)Software installed!$(tput sgr0)
+
 You can now edit $installPath/list"
