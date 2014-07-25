@@ -4,8 +4,10 @@ cronPath="/etc/cron.d"
 updateFrequency=1
 
 if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
-  exit
+then
+  echo "[$(tput setaf 1)Error$(tput sgr0)] This script needs superuser privileges to run...
+Exiting..."
+  exit 1
 fi
 
 read -p "Enter the location to install the script [/opt/resolve-dynamic-hosts]: " tmp
